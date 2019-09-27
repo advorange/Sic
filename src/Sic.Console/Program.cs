@@ -44,14 +44,13 @@ namespace Sic.Console
 			var files = _FileHandler.GetImageFiles();
 			var lockObj = new object();
 			var i = 0;
-			_ImageComparer.FileCached += file =>
+			await foreach (var details in _ImageComparer.CacheFilesAsync(files))
 			{
 				lock (lockObj)
 				{
-					ConsoleUtils.WriteLine($"[#{++i}] Processed {file.Source}.");
+					ConsoleUtils.WriteLine($"[#{++i}] Processed {details.Source}.");
 				}
-			};
-			await _ImageComparer.CacheFilesGrouped(files).CAF();
+			}
 			System.Console.WriteLine();
 		}
 
