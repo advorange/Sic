@@ -1,0 +1,4 @@
+﻿[*.cs]
+
+# RCS1188: Remove redundant auto-property initialization.
+dotnet_diagnostic.RCS1188.severity = none

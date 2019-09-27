@@ -1,53 +1,24 @@
 ﻿using System.Collections.Generic;
 using System.IO;
 
-using AdvorangesSettingParser.Implementation.Instance;
-using AdvorangesSettingParser.Interfaces;
-using AdvorangesSettingParser.Utils;
-
 using AdvorangesUtils;
+
+using Sic.Core.Abstractions;
 
 namespace Sic.Core
 {
-	public sealed class FileHandler : IParsable
+	public sealed class FileHandler : IFileHandler
 	{
-		private DirectoryInfo? _Destination;
+		private readonly IFileHandlerArgs _Args;
 
-		public DirectoryInfo Destination
+		public FileHandler(IFileHandlerArgs args)
 		{
-			get => _Destination ?? Source.CreateSubdirectory("Duplicates");
-			set => _Destination = value;
-		}
-
-		public bool IsRecursive { get; set; }
-		public SettingParser SettingParser { get; set; }
-		public DirectoryInfo Source { get; set; } = null!;
-
-		public FileHandler()
-		{
-			SettingParser = new SettingParser
-			{
-				new Setting<bool>(() => IsRecursive, new[] { "r" })
-				{
-					Description = "Whether to search for files deeper than the current directory.",
-					IsFlag = true,
-				},
-				new Setting<DirectoryInfo>(() => Source, new[] { "s" }, TryParseUtils.TryParseDirectoryInfo)
-				{
-					Description = "The directory to look through."
-				},
-				new Setting<DirectoryInfo>(() => Destination, new[] { "d" }, TryParseUtils.TryParseDirectoryInfo)
-				{
-					Description = "The directory to move duplicates to.",
-					IsOptional = true,
-					CannotBeNull = false,
-				},
-			};
+			_Args = args;
 		}
 
 		public IEnumerable<string> GetImageFiles()
 		{
-			foreach (var file in GetFiles(Source))
+			foreach (var file in GetFiles(_Args.Source))
 			{
 				if (file.FullName.IsImagePath())
 				{
@@ -58,10 +29,10 @@ namespace Sic.Core
 
 		public void MoveFiles(IEnumerable<string> files)
 		{
-			Destination.Create();
+			_Args.Destination.Create();
 
-			var sourceDir = Source.FullName;
-			var destDir = Destination.FullName;
+			var sourceDir = _Args.Source.FullName;
+			var destDir = _Args.Destination.FullName;
 			foreach (var source in files)
 			{
 				var destination = source.Replace(sourceDir, destDir);
@@ -83,7 +54,7 @@ namespace Sic.Core
 
 		private IEnumerable<FileInfo> GetFiles(DirectoryInfo path)
 		{
-			if (IsRecursive)
+			if (_Args.IsRecursive)
 			{
 				foreach (var dir in path.EnumerateDirectories())
 				{

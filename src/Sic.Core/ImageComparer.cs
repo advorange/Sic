@@ -20,22 +20,22 @@ namespace Sic.Core
 {
 	public class ImageComparer : IImageComparer
 	{
+		private readonly IImageComparerArgs _Args;
+
 		private readonly ConcurrentDictionary<string, IFileImageDetails> _ImageDetails
 			= new ConcurrentDictionary<string, IFileImageDetails>();
 
 		public IReadOnlyCollection<IFileImageDetails> ImageDetails => _ImageDetails.Values.ToArray();
 
-		protected int DefaultThumbnailSize { get; set; }
-		protected int ImagesPerTask { get; set; }
+		public event Action<IFileImageDetails>? FileCached;
 
-		public ImageComparer() : this(25, 10)
+		public ImageComparer() : this(ImageComparerArgs.Default)
 		{
 		}
 
-		public ImageComparer(int thumbnailSize, int imagesPerTask)
+		public ImageComparer(IImageComparerArgs args)
 		{
-			DefaultThumbnailSize = thumbnailSize;
-			ImagesPerTask = imagesPerTask;
+			_Args = args;
 		}
 
 		public async IAsyncEnumerable<IFileImageDetails> CacheFiles(IEnumerable<string> paths)
@@ -47,10 +47,30 @@ namespace Sic.Core
 					continue;
 				}
 
-				var details = await CreateFileDetailsAsync(path, DefaultThumbnailSize).CAF();
+				var details = await CreateFileDetailsAsync(path, _Args.ThumbnailSize).CAF();
 				_ImageDetails.AddOrUpdate(path, (_) => details, (_, __) => details);
+				FileCached?.Invoke(details);
 				yield return details;
 			}
+		}
+
+		public async Task CacheFilesGrouped(IEnumerable<string> paths)
+		{
+			var tasks = paths.GroupInto(_Args.ImagesPerTask).Select(x => Task.Run(async () =>
+			{
+				foreach (var path in x)
+				{
+					if (!File.Exists(path))
+					{
+						continue;
+					}
+
+					var details = await CreateFileDetailsAsync(path, _Args.ThumbnailSize).CAF();
+					_ImageDetails.AddOrUpdate(path, (_) => details, (_, __) => details);
+					FileCached?.Invoke(details);
+				}
+			}));
+			await Task.WhenAll(tasks).CAF();
 		}
 
 		public IAsyncEnumerable<IFileImageDetails> GetDuplicates(double similarity = 1)
@@ -142,9 +162,14 @@ namespace Sic.Core
 			}
 
 			//Check once again but with a higher resolution
-			var resolution = GetSmallestSize(x, y);
-			var largerLater = await CreateFileDetailsAsync(x.Source, resolution).CAF();
-			var largetEarlier = await CreateFileDetailsAsync(y.Source, resolution).CAF();
+			var size = 512;
+			size = Math.Min(size, x.Original.Width);
+			size = Math.Min(size, x.Original.Height);
+			size = Math.Min(size, y.Original.Width);
+			size = Math.Min(size, y.Original.Height);
+
+			var largerLater = await CreateFileDetailsAsync(x.Source, size).CAF();
+			var largetEarlier = await CreateFileDetailsAsync(y.Source, size).CAF();
 			return AreSimilar(largerLater, largetEarlier, similarity);
 		}
 
@@ -170,8 +195,7 @@ namespace Sic.Core
 				chars[i] = brightnesses[i] > avg ? '1' : '0';
 			}
 
-			var hash = new string(chars);
-			return CreateHashDetails(hash, image);
+			return new HashDetails(image.Width, image.Height, new string(chars));
 		}
 
 		protected async Task<IFileImageDetails> CreateFileDetailsAsync(string path, int size)
@@ -180,13 +204,6 @@ namespace Sic.Core
 			var bytes = await File.ReadAllBytesAsync(path).CAF();
 			var details = CreateImageDetails(bytes, size);
 			return new FileImageDetails(created, path, details);
-		}
-
-		protected HashDetails CreateHashDetails(string hash, Image<Rgba32> image)
-		{
-			var width = image.Width;
-			var height = image.Height;
-			return new HashDetails(width, height, hash);
 		}
 
 		protected IImageDetails CreateImageDetails(ReadOnlySpan<byte> bytes, int size)
@@ -212,7 +229,7 @@ namespace Sic.Core
 
 			var array = destination.ToArray();
 			var hash = BitConverter.ToString(array).Replace("-", "").ToLower();
-			return CreateHashDetails(hash, image);
+			return new HashDetails(image.Width, image.Height, hash);
 		}
 
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -225,16 +242,6 @@ namespace Sic.Core
 			const float B_MULT = 0.114f;
 			const float A_VALS = 255f;
 			return ((R_MULT * r) + (G_MULT * g) + (B_MULT * b)) * (a / A_VALS);
-		}
-
-		protected int GetSmallestSize(IImageDetails x, IImageDetails y)
-		{
-			var size = 512;
-			size = Math.Min(size, x.Original.Width);
-			size = Math.Min(size, x.Original.Height);
-			size = Math.Min(size, y.Original.Width);
-			size = Math.Min(size, y.Original.Height);
-			return size;
 		}
 	}
 }

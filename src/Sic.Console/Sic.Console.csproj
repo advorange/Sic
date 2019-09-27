@@ -1,9 +1,14 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>netcoreapp3.0</TargetFramework>
+    <Nullable>enable</Nullable>
   </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="AdvorangesSettingParser" Version="1.4.0" />
+  </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\Sic.Core\Sic.Core.csproj" />

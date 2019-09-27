@@ -2,62 +2,75 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
-using AdvorangesSettingParser.Implementation;
-
 using AdvorangesUtils;
 
 using Sic.Core;
-using Sic.Core.Abstractions;
 
 namespace Sic.Console
 {
-	public sealed class Program
+	internal sealed class Program
 	{
-		private static async Task Main(string[] args)
+		static Program()
 		{
 			ConsoleUtils.PrintingFlags &= ~ConsolePrintingFlags.RemoveMarkdown;
+		}
 
-			var fileHandler = new FileHandler();
-			var imageComparer = new ImageComparer();
+		private readonly Args _Args;
+		private readonly FileHandler _FileHandler;
+		private readonly ImageComparer _ImageComparer;
 
+		public Program(string[] args)
+		{
 #if DEBUG && TRUE
 			args = new[]
 			{
 				"-s",
-				@"D:\Test - Copy",
+				@"D:\Test",
 			};
 #endif
+			_Args = Args.Parse(args);
+			_FileHandler = new FileHandler(_Args);
+			_ImageComparer = new ImageComparer(_Args);
+		}
 
-			var parseArgs = new ParseArgs(args, new[] { '"' }, new[] { '"' });
-			fileHandler.SettingParser.Parse(parseArgs);
+		public async Task RunAsync()
+		{
+			await ProcessFilesAsync().CAF();
+			await ProcessDuplicatesAsync().CAF();
+		}
 
-			var files = fileHandler.GetImageFiles();
+		private async Task ProcessFilesAsync()
+		{
+			var files = _FileHandler.GetImageFiles();
+			var lockObj = new object();
 			var i = 0;
-			await foreach (var file in imageComparer.CacheFiles(files))
+			_ImageComparer.FileCached += file =>
 			{
-				ConsoleUtils.WriteLine($"[#{++i}] Processed {file.Source}.");
-			}
+				lock (lockObj)
+				{
+					ConsoleUtils.WriteLine($"[#{++i}] Processed {file.Source}.");
+				}
+			};
+			await _ImageComparer.CacheFilesGrouped(files).CAF();
 			System.Console.WriteLine();
+		}
 
+		private async Task ProcessDuplicatesAsync()
+		{
 			var duplicates = new List<string>();
 			var j = 0;
-			await foreach (var file in imageComparer.GetDuplicates(progress: new DuplicateProgress()))
+			await foreach (var file in _ImageComparer.GetDuplicates(progress: new DuplicateProgress()))
 			{
 				ConsoleUtils.WriteLine($"[#{++j}] Found a duplicate: {file.Source}.", ConsoleColor.DarkYellow);
 				duplicates.Add(file.Source);
 			}
 			System.Console.WriteLine();
 
-			fileHandler.MoveFiles(duplicates);
-			ConsoleUtils.WriteLine($"Moved {duplicates.Count} duplicates to {fileHandler.Destination}.");
+			_FileHandler.MoveFiles(duplicates);
+			ConsoleUtils.WriteLine($"Moved {duplicates.Count} duplicates to {_Args.Destination}.");
 		}
 
-		private sealed class DuplicateProgress : IProgress<IFileImageDetails>
-		{
-			private int _Count;
-
-			public void Report(IFileImageDetails value)
-				=> ConsoleUtils.WriteLine($"[#{++_Count}] Found no duplicates for: {value.Source}.");
-		}
+		private static Task Main(string[] args)
+			=> new Program(args).RunAsync();
 	}
 }
