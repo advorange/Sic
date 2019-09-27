@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Security.Cryptography;
+using System.Threading;
 using System.Threading.Tasks;
 
 using AdvorangesUtils;
@@ -38,7 +39,7 @@ namespace Sic.Core
 			_Args = args;
 		}
 
-		public async IAsyncEnumerable<IFileImageDetails> CacheFiles(IEnumerable<string> paths)
+		public async IAsyncEnumerable<IFileImageDetails> CacheFilesAsync(IEnumerable<string> paths)
 		{
 			foreach (var path in paths)
 			{
@@ -73,10 +74,7 @@ namespace Sic.Core
 			await Task.WhenAll(tasks).CAF();
 		}
 
-		public IAsyncEnumerable<IFileImageDetails> GetDuplicates(double similarity = 1)
-			=> GetDuplicates(similarity, null);
-
-		public async IAsyncEnumerable<IFileImageDetails> GetDuplicates(
+		public async IAsyncEnumerable<IFileImageDetails> GetDuplicatesAsync(
 			double similarity = 1,
 			IProgress<IFileImageDetails>? progress = null)
 		{
@@ -118,6 +116,9 @@ namespace Sic.Core
 				progress?.Report(later);
 			}
 		}
+
+		public IAsyncEnumerable<IFileImageDetails> GetDuplicatesAsync(double similarity = 1)
+					=> GetDuplicatesAsync(similarity, null);
 
 		protected bool AreSameData(IImageDetails x, IImageDetails y)
 			=> x.Original.Hash == y.Original.Hash;

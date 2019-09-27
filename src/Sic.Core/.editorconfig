@@ -2,3 +2,6 @@
 
 # RCS1188: Remove redundant auto-property initialization.
 dotnet_diagnostic.RCS1188.severity = none
+
+# RCS1047: Non-asynchronous method name should not end with 'Async'.
+dotnet_diagnostic.RCS1047.severity = none

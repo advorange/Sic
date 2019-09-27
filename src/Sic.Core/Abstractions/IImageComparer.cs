@@ -6,8 +6,8 @@ namespace Sic.Core.Abstractions
 	{
 		IReadOnlyCollection<IFileImageDetails> ImageDetails { get; }
 
-		IAsyncEnumerable<IFileImageDetails> CacheFiles(IEnumerable<string> paths);
+		IAsyncEnumerable<IFileImageDetails> CacheFilesAsync(IEnumerable<string> paths);
 
-		IAsyncEnumerable<IFileImageDetails> GetDuplicates(double similarity = 1);
+		IAsyncEnumerable<IFileImageDetails> GetDuplicatesAsync(double similarity = 1);
 	}
 }

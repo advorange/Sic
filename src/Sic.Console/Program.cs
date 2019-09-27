@@ -59,7 +59,7 @@ namespace Sic.Console
 		{
 			var duplicates = new List<string>();
 			var j = 0;
-			await foreach (var file in _ImageComparer.GetDuplicates(progress: new DuplicateProgress()))
+			await foreach (var file in _ImageComparer.GetDuplicatesAsync(progress: new DuplicateProgress()))
 			{
 				ConsoleUtils.WriteLine($"[#{++j}] Found a duplicate: {file.Source}.", ConsoleColor.DarkYellow);
 				duplicates.Add(file.Source);
