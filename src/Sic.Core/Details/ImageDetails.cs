@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Diagnostics;
-
+using System.IO;
+using System.Threading.Tasks;
+using AdvorangesUtils;
 using Sic.Core.Abstractions;
 using Sic.Core.Hashes;
 using Sic.Core.Utils;
@@ -10,7 +12,7 @@ using SixLabors.ImageSharp.Advanced;
 using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
 
-namespace Sic.Core
+namespace Sic.Core.Details
 {
 	[DebuggerDisplay("{DebuggerDisplay,nq}")]
 	public class ImageDetails : IImageDetails, IEquatable<IImageDetails>
@@ -38,6 +40,15 @@ namespace Sic.Core
 			var thumbnail = BrightnessHash.Create(pixels, img.Width, img.Height);
 
 			return new ImageDetails(original, thumbnail);
+		}
+
+		public static async Task<IImageDetails> CreateAsync(Stream stream, int size)
+		{
+			using var ms = new MemoryStream();
+
+			await stream.CopyToAsync(ms).CAF();
+
+			return Create(ms.ToArray(), size);
 		}
 
 		public override bool Equals(object obj)

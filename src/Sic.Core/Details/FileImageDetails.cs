@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
 using System.IO;
+using System.Net.Http;
 using System.Threading.Tasks;
 
 using AdvorangesUtils;
@@ -8,7 +9,7 @@ using AdvorangesUtils;
 using Sic.Core.Abstractions;
 using Sic.Core.Utils;
 
-namespace Sic.Core
+namespace Sic.Core.Details
 {
 	[DebuggerDisplay("{DebuggerDisplay,nq}")]
 	public class FileImageDetails : IFileImageDetails, IEquatable<IFileImageDetails>
@@ -33,18 +34,23 @@ namespace Sic.Core
 			Thumbnail = thumbnail;
 		}
 
-		protected FileImageDetails(
-			DateTimeOffset createdAt,
-			string source,
-			IImageDetails details)
-			: this(createdAt, source, details.Original, details.Thumbnail) { }
-
 		public static async Task<IFileImageDetails> CreateAsync(string path, int size)
 		{
 			var created = File.GetCreationTimeUtc(path);
 			var bytes = await File.ReadAllBytesAsync(path).CAF();
 			var details = ImageDetails.Create(bytes, size);
-			return new FileImageDetails(created, path, details);
+			return new FileImageDetails(created, path, details.Original, details.Thumbnail);
+		}
+
+		public static async Task<IImageDetails> CreateAsync(
+			HttpResponseMessage response,
+			int size)
+		{
+			var created = DateTimeOffset.UtcNow;
+			var source = response.RequestMessage.RequestUri.ToString();
+			var bytes = await response.Content.ReadAsByteArrayAsync().CAF();
+			var details = ImageDetails.Create(bytes, size);
+			return new FileImageDetails(created, source, details.Original, details.Thumbnail);
 		}
 
 		public override bool Equals(object obj)

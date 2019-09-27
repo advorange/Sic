@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 using AdvorangesUtils;
 
 using Sic.Core.Abstractions;
-using Sic.Core.Utils;
+using Sic.Core.Details;
 
 namespace Sic.Core
 {
