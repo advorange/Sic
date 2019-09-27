@@ -1,9 +1,11 @@
 ﻿using System;
 using System.IO;
+
 using AdvorangesSettingParser.Implementation;
 using AdvorangesSettingParser.Implementation.Instance;
 using AdvorangesSettingParser.Interfaces;
 using AdvorangesSettingParser.Utils;
+
 using Sic.Core;
 using Sic.Core.Abstractions;
 

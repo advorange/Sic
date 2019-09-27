@@ -77,7 +77,8 @@ namespace Sic.Core
 						continue;
 					}
 
-					var details = await HashingUtils.CreateFileDetailsAsync(path, _Args.ThumbnailSize).CAF();
+					var size = _Args.ThumbnailSize;
+					var details = await FileImageDetails.CreateAsync(path, size).CAF();
 					_Queue.Enqueue(details);
 				}
 			}, _CancellationToken));

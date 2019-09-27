@@ -104,8 +104,8 @@ namespace Sic.Core
 			size = Math.Min(size, y.Original.Width);
 			size = Math.Min(size, y.Original.Height);
 
-			var x2 = await HashingUtils.CreateFileDetailsAsync(x.Source, size).CAF();
-			var y2 = await HashingUtils.CreateFileDetailsAsync(y.Source, size).CAF();
+			var x2 = await FileImageDetails.CreateAsync(x.Source, size).CAF();
+			var y2 = await FileImageDetails.CreateAsync(y.Source, size).CAF();
 			return x2.Thumbnail.IsSimilar(y2.Thumbnail, similarity);
 		}
 	}

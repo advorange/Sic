@@ -1,4 +1,5 @@
 ﻿using System;
+
 using Sic.Core.Abstractions;
 
 namespace Sic.Core.Utils

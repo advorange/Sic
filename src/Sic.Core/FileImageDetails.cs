@@ -1,5 +1,9 @@
 ﻿using System;
 using System.Diagnostics;
+using System.IO;
+using System.Threading.Tasks;
+
+using AdvorangesUtils;
 
 using Sic.Core.Abstractions;
 using Sic.Core.Utils;
@@ -17,10 +21,7 @@ namespace Sic.Core
 		private string DebuggerDisplay
 			=> $"Source: {Source}, Created At: {CreatedAt}, Width: {Original.Width}, Height: {Original.Height}";
 
-		public FileImageDetails(DateTimeOffset createdAt, string source, IImageDetails details)
-			: this(createdAt, source, details.Original, details.Thumbnail) { }
-
-		public FileImageDetails(
+		protected FileImageDetails(
 			DateTimeOffset createdAt,
 			string source,
 			IHashDetails original,
@@ -30,6 +31,20 @@ namespace Sic.Core
 			Original = original;
 			Source = source;
 			Thumbnail = thumbnail;
+		}
+
+		protected FileImageDetails(
+			DateTimeOffset createdAt,
+			string source,
+			IImageDetails details)
+			: this(createdAt, source, details.Original, details.Thumbnail) { }
+
+		public static async Task<IFileImageDetails> CreateAsync(string path, int size)
+		{
+			var created = File.GetCreationTimeUtc(path);
+			var bytes = await File.ReadAllBytesAsync(path).CAF();
+			var details = ImageDetails.Create(bytes, size);
+			return new FileImageDetails(created, path, details);
 		}
 
 		public override bool Equals(object obj)

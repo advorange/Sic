@@ -2,7 +2,13 @@
 using System.Diagnostics;
 
 using Sic.Core.Abstractions;
+using Sic.Core.Hashes;
 using Sic.Core.Utils;
+
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.Advanced;
+using SixLabors.ImageSharp.PixelFormats;
+using SixLabors.ImageSharp.Processing;
 
 namespace Sic.Core
 {
@@ -15,10 +21,23 @@ namespace Sic.Core
 		private string DebuggerDisplay
 			=> $"Width: {Original.Width}, Height: {Original.Height}";
 
-		public ImageDetails(IHashDetails original, IHashDetails thumbnail)
+		protected ImageDetails(IHashDetails original, IHashDetails thumbnail)
 		{
 			Original = original;
 			Thumbnail = thumbnail;
+		}
+
+		public static IImageDetails Create(ReadOnlySpan<byte> bytes, int size)
+		{
+			using var img = Image.Load<Rgba32>(bytes);
+
+			var original = MD5Hash.Create(bytes, img.Width, img.Height);
+
+			img.Mutate(x => x.Resize(size, 0));
+			var pixels = img.GetPixelSpan();
+			var thumbnail = BrightnessHash.Create(pixels, img.Width, img.Height);
+
+			return new ImageDetails(original, thumbnail);
 		}
 
 		public override bool Equals(object obj)
