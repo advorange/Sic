@@ -10,7 +10,9 @@ namespace Sic.Core
 		private readonly IImageComparerArgs _Args;
 		private readonly IEnumerable<string> _Paths;
 
-		public BackgroundCachingAsyncEnumerable(IEnumerable<string> paths, IImageComparerArgs args)
+		public BackgroundCachingAsyncEnumerable(
+			IEnumerable<string> paths,
+			IImageComparerArgs args)
 		{
 			_Paths = paths;
 			_Args = args;

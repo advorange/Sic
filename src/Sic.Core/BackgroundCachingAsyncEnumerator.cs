@@ -19,8 +19,7 @@ namespace Sic.Core
 		private readonly CancellationToken _CancellationToken;
 		private readonly IEnumerable<string> _Paths;
 		private readonly ConcurrentQueue<IFileImageDetails> _Queue = new ConcurrentQueue<IFileImageDetails>();
-
-		private int _IsEnded;
+		private int _FinishedProcessing;
 		private int _IsStarted;
 		public IFileImageDetails Current { get; private set; } = null!;
 
@@ -39,7 +38,7 @@ namespace Sic.Core
 
 		public async ValueTask<bool> MoveNextAsync()
 		{
-			if (_IsEnded == 1 && _Queue.IsEmpty)
+			if (_FinishedProcessing == 1 && _Queue.IsEmpty)
 			{
 				return false;
 			}
@@ -50,9 +49,10 @@ namespace Sic.Core
 				_ = StartProcessingAsync();
 			}
 
+			//Wait until something is in the cache
 			while (_Queue.IsEmpty)
 			{
-				await Task.Delay(10).CAF();
+				await Task.Delay(10, _CancellationToken).CAF();
 			}
 
 			if (!_Queue.TryDequeue(out var details))
@@ -66,10 +66,12 @@ namespace Sic.Core
 
 		private async Task StartProcessingAsync()
 		{
-			var tasks = _Paths.GroupInto(_Args.ImagesPerTask).Select(x => Task.Run(async () =>
+			var groups = _Paths.GroupInto(_Args.ImagesPerTask);
+			var tasks = groups.Select(x => Task.Run(async () =>
 			{
 				foreach (var path in x)
 				{
+					_CancellationToken.ThrowIfCancellationRequested();
 					if (!File.Exists(path))
 					{
 						continue;
@@ -78,9 +80,16 @@ namespace Sic.Core
 					var details = await HashingUtils.CreateFileDetailsAsync(path, _Args.ThumbnailSize).CAF();
 					_Queue.Enqueue(details);
 				}
-			}));
-			await Task.WhenAll(tasks).CAF();
-			Interlocked.Exchange(ref _IsEnded, 1);
+			}, _CancellationToken));
+			try
+			{
+				await Task.WhenAll(tasks).CAF();
+			}
+			catch (TaskCanceledException)
+			{
+				//Just treat TaskCanceledException as an early end of processing
+			}
+			Interlocked.Exchange(ref _FinishedProcessing, 1);
 		}
 	}
 }

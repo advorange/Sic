@@ -82,7 +82,7 @@ namespace Sic.Core
 		}
 
 		public IAsyncEnumerable<IFileImageDetails> GetDuplicatesAsync(double similarity = 1)
-					=> GetDuplicatesAsync(similarity, null);
+			=> GetDuplicatesAsync(similarity, null);
 
 		protected bool AreSameData(IImageDetails x, IImageDetails y)
 			=> x.Original.Hash == y.Original.Hash;

@@ -25,7 +25,7 @@ namespace Sic.Console
 			args = new[]
 			{
 				"-s",
-				@"D:\Test",
+				@"D:\Test - Copy",
 			};
 #endif
 			_Args = Args.Parse(args);
