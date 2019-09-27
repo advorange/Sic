@@ -2,11 +2,12 @@
 using System.Diagnostics;
 
 using Sic.Core.Abstractions;
+using Sic.Core.Utils;
 
-namespace Sic.Core
+namespace Sic.Core.Hashes
 {
 	[DebuggerDisplay("{DebuggerDisplay,nq}")]
-	public sealed class HashDetails : IHashDetails, IEquatable<IHashDetails>
+	public abstract class HashDetails : IHashDetails, IEquatable<IHashDetails>
 	{
 		public string Hash { get; }
 		public int Height { get; }
@@ -15,14 +16,14 @@ namespace Sic.Core
 		private string DebuggerDisplay
 			=> $"Width: {Width}, Height: {Height}, Hash: {Hash}";
 
-		public HashDetails(int size, string hash)
+		protected HashDetails(int size, string hash)
 		{
 			Hash = hash;
 			Height = size;
 			Width = size;
 		}
 
-		public HashDetails(int width, int height, string hash)
+		protected HashDetails(int width, int height, string hash)
 		{
 			Hash = hash;
 			Height = height;
@@ -30,21 +31,7 @@ namespace Sic.Core
 		}
 
 		public override bool Equals(object obj)
-		{
-			if (obj is null)
-			{
-				return false;
-			}
-			else if (ReferenceEquals(this, obj))
-			{
-				return true;
-			}
-			else if (obj is IHashDetails other)
-			{
-				return Equals(other);
-			}
-			return false;
-		}
+			=> this.Equals<IHashDetails>(obj);
 
 		public bool Equals(IHashDetails other)
 		{
@@ -68,5 +55,7 @@ namespace Sic.Core
 				return hash;
 			}
 		}
+
+		public abstract bool IsSimilar(IHashDetails other, double similarity);
 	}
 }

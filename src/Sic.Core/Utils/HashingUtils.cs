@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using AdvorangesUtils;
 
 using Sic.Core.Abstractions;
+using Sic.Core.Hashes;
 
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Advanced;
@@ -17,7 +18,7 @@ namespace Sic.Core.Utils
 {
 	public static class HashingUtils
 	{
-		public static HashDetails CreateBrightnessHash(Image<Rgba32> image, int size)
+		public static IHashDetails CreateBrightnessHash(Image<Rgba32> image, int size)
 		{
 			image.Mutate(x => x.Resize(size, 0));
 			var pixels = image.GetPixelSpan();
@@ -39,7 +40,7 @@ namespace Sic.Core.Utils
 				chars[i] = brightnesses[i] > avg ? '1' : '0';
 			}
 
-			return new HashDetails(image.Width, image.Height, new string(chars));
+			return new BrightnessHash(image.Width, image.Height, new string(chars));
 		}
 
 		public static async Task<IFileImageDetails> CreateFileDetailsAsync(string path, int size)
@@ -59,7 +60,7 @@ namespace Sic.Core.Utils
 			return new ImageDetails(original, thumbnail);
 		}
 
-		public static HashDetails CreateMD5Hash(Image<Rgba32> image, ReadOnlySpan<byte> bytes)
+		public static IHashDetails CreateMD5Hash(Image<Rgba32> image, ReadOnlySpan<byte> bytes)
 		{
 			Span<byte> destination = new byte[16];
 
@@ -73,7 +74,7 @@ namespace Sic.Core.Utils
 
 			var array = destination.ToArray();
 			var hash = BitConverter.ToString(array).Replace("-", "").ToLower();
-			return new HashDetails(image.Width, image.Height, hash);
+			return new MD5Hash(image.Width, image.Height, hash);
 		}
 
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]

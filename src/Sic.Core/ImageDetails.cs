@@ -2,6 +2,7 @@
 using System.Diagnostics;
 
 using Sic.Core.Abstractions;
+using Sic.Core.Utils;
 
 namespace Sic.Core
 {
@@ -21,21 +22,7 @@ namespace Sic.Core
 		}
 
 		public override bool Equals(object obj)
-		{
-			if (obj is null)
-			{
-				return false;
-			}
-			else if (ReferenceEquals(this, obj))
-			{
-				return true;
-			}
-			else if (obj is IImageDetails other)
-			{
-				return Equals(other);
-			}
-			return false;
-		}
+			=> this.Equals<IImageDetails>(obj);
 
 		public bool Equals(IImageDetails other)
 		{

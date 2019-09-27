@@ -84,44 +84,15 @@ namespace Sic.Core
 		public IAsyncEnumerable<IFileImageDetails> GetDuplicatesAsync(double similarity = 1)
 			=> GetDuplicatesAsync(similarity, null);
 
-		protected bool AreSameData(IImageDetails x, IImageDetails y)
+		protected virtual bool AreSameData(IImageDetails x, IImageDetails y)
 			=> x.Original.Hash == y.Original.Hash;
 
-		protected bool AreSimilar(IImageDetails x, IImageDetails y, double similarity)
-		{
-			if (x.Thumbnail.Hash.Length != y.Thumbnail.Hash.Length)
-			{
-				return false;
-			}
-
-			//If the aspect ratio is too different then don't bother checking the hash
-			var margin = 1 - similarity;
-			var xAspect = x.Thumbnail.Width / (float)x.Thumbnail.Height;
-			var yAspect = y.Thumbnail.Width / (float)y.Thumbnail.Height;
-			if (xAspect > yAspect * (1 + margin) || xAspect < yAspect * (1 - margin))
-			{
-				return false;
-			}
-
-			var matchCount = 0;
-			var xHash = x.Thumbnail.Hash;
-			var yHash = y.Thumbnail.Hash;
-			for (var i = 0; i < xHash.Length; ++i)
-			{
-				if (xHash[i] == yHash[i])
-				{
-					++matchCount;
-				}
-			}
-			return (matchCount / (float)xHash.Length) >= similarity;
-		}
-
-		protected async Task<bool> AreSimilarAsync(
+		protected virtual async Task<bool> AreSimilarAsync(
 			IFileImageDetails x,
 			IFileImageDetails y,
 			double similarity)
 		{
-			if (!AreSimilar(x, y, similarity))
+			if (!x.Thumbnail.IsSimilar(y.Thumbnail, similarity))
 			{
 				return false;
 			}
@@ -133,9 +104,9 @@ namespace Sic.Core
 			size = Math.Min(size, y.Original.Width);
 			size = Math.Min(size, y.Original.Height);
 
-			var largerLater = await HashingUtils.CreateFileDetailsAsync(x.Source, size).CAF();
-			var largetEarlier = await HashingUtils.CreateFileDetailsAsync(y.Source, size).CAF();
-			return AreSimilar(largerLater, largetEarlier, similarity);
+			var x2 = await HashingUtils.CreateFileDetailsAsync(x.Source, size).CAF();
+			var y2 = await HashingUtils.CreateFileDetailsAsync(y.Source, size).CAF();
+			return x2.Thumbnail.IsSimilar(y2.Thumbnail, similarity);
 		}
 	}
 }
