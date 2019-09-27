@@ -6,7 +6,6 @@ using Sic.Core.Utils;
 namespace Sic.Core.Hashes
 {
 	[DebuggerDisplay("{DebuggerDisplay,nq}")]
-	[DebuggerTypeProxy(typeof(HashDetails))]
 	public sealed class BrightnessHash : HashDetails
 	{
 		public BrightnessHash(int size, string hash) : base(size, hash)

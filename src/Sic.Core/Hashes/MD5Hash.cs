@@ -5,7 +5,6 @@ using Sic.Core.Abstractions;
 namespace Sic.Core.Hashes
 {
 	[DebuggerDisplay("{DebuggerDisplay,nq}")]
-	[DebuggerTypeProxy(typeof(HashDetails))]
 	public sealed class MD5Hash : HashDetails
 	{
 		public MD5Hash(int size, string hash) : base(size, hash)
