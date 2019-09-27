@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 
 using AdvorangesUtils;
@@ -29,14 +31,11 @@ namespace Sic.Core
 			_Args = args;
 		}
 
-		public async IAsyncEnumerable<IFileImageDetails> CacheFilesAsync(IEnumerable<string> paths)
-		{
-			await foreach (var details in new BackgroundCachingAsyncEnumerable(paths, _Args))
-			{
-				_ImageDetails.AddOrUpdate(details.Source, _ => details, (_, __) => details);
-				yield return details;
-			}
-		}
+		public void Cache(IFileImageDetails details)
+			=> _ImageDetails.AddOrUpdate(details.Source, _ => details, (_, __) => details);
+
+		public IAsyncEnumerable<IFileImageDetails> CacheFilesAsync(IEnumerable<string> paths)
+			=> new BackgroundCachingAsyncEnumerable(paths, this);
 
 		public async IAsyncEnumerable<IFileImageDetails> GetDuplicatesAsync(
 			double similarity = 1,
@@ -107,6 +106,105 @@ namespace Sic.Core
 			var x2 = await FileImageDetails.CreateAsync(x.Source, size).CAF();
 			var y2 = await FileImageDetails.CreateAsync(y.Source, size).CAF();
 			return x2.Thumbnail.IsSimilar(y2.Thumbnail, similarity);
+		}
+
+		private sealed class BackgroundCachingAsyncEnumerable : IAsyncEnumerable<IFileImageDetails>
+		{
+			private readonly ImageComparer _Comparer;
+			private readonly IEnumerable<string> _Paths;
+
+			public BackgroundCachingAsyncEnumerable(
+				IEnumerable<string> paths,
+				ImageComparer comparer)
+			{
+				_Paths = paths;
+				_Comparer = comparer;
+			}
+
+			public IAsyncEnumerator<IFileImageDetails> GetAsyncEnumerator(CancellationToken cancellationToken = default)
+				=> new BackgroundCachingAsyncEnumerator(_Paths, _Comparer, cancellationToken);
+		}
+
+		private sealed class BackgroundCachingAsyncEnumerator : IAsyncEnumerator<IFileImageDetails>
+		{
+			private readonly CancellationToken _CancellationToken;
+			private readonly ImageComparer _Comparer;
+			private readonly IEnumerable<string> _Paths;
+			private readonly ConcurrentQueue<IFileImageDetails> _Queue = new ConcurrentQueue<IFileImageDetails>();
+			private int _FinishedProcessing;
+			private int _IsStarted;
+			public IFileImageDetails Current { get; private set; } = null!;
+
+			public BackgroundCachingAsyncEnumerator(
+				IEnumerable<string> paths,
+				ImageComparer comparer,
+				CancellationToken cancellationToken)
+			{
+				_Paths = paths;
+				_Comparer = comparer;
+				_CancellationToken = cancellationToken;
+			}
+
+			public ValueTask DisposeAsync()
+				=> new ValueTask();
+
+			public async ValueTask<bool> MoveNextAsync()
+			{
+				if (_FinishedProcessing == 1 && _Queue.IsEmpty)
+				{
+					return false;
+				}
+
+				//Start the tasks if not already running
+				if (Interlocked.Exchange(ref _IsStarted, 1) == 0)
+				{
+					_ = StartProcessingAsync();
+				}
+
+				//Wait until something is in the cache
+				while (_Queue.IsEmpty)
+				{
+					await Task.Delay(10, _CancellationToken).CAF();
+				}
+
+				if (!_Queue.TryDequeue(out var details))
+				{
+					throw new InvalidOperationException("Unable to retrieve from queue.");
+				}
+
+				Current = details;
+				_Comparer.Cache(Current);
+				return true;
+			}
+
+			private async Task StartProcessingAsync()
+			{
+				var groups = _Paths.GroupInto(_Comparer._Args.ImagesPerTask);
+				var tasks = groups.Select(x => Task.Run(async () =>
+				{
+					foreach (var path in x)
+					{
+						_CancellationToken.ThrowIfCancellationRequested();
+						if (!File.Exists(path))
+						{
+							continue;
+						}
+
+						var size = _Comparer._Args.ThumbnailSize;
+						var details = await FileImageDetails.CreateAsync(path, size).CAF();
+						_Queue.Enqueue(details);
+					}
+				}, _CancellationToken));
+				try
+				{
+					await Task.WhenAll(tasks).CAF();
+				}
+				catch (TaskCanceledException)
+				{
+					//Just treat TaskCanceledException as an early end of processing
+				}
+				Interlocked.Exchange(ref _FinishedProcessing, 1);
+			}
 		}
 	}
 }

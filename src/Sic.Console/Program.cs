@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 
 using AdvorangesUtils;
@@ -25,7 +26,7 @@ namespace Sic.Console
 			args = new[]
 			{
 				"-s",
-				@"D:\Test - Copy",
+				@"D:\Test",
 			};
 #endif
 			_Args = Args.Parse(args);
@@ -42,14 +43,11 @@ namespace Sic.Console
 		private async Task ProcessFilesAsync()
 		{
 			var files = _FileHandler.GetImageFiles();
-			var lockObj = new object();
 			var i = 0;
 			await foreach (var details in _ImageComparer.CacheFilesAsync(files))
 			{
-				lock (lockObj)
-				{
-					ConsoleUtils.WriteLine($"[#{++i}] Processed {details.Source}.");
-				}
+				var count = Interlocked.Increment(ref i);
+				ConsoleUtils.WriteLine($"[#{i}] Processed {details.Source}.");
 			}
 			System.Console.WriteLine();
 		}
