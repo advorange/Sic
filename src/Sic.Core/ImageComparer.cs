@@ -53,11 +53,16 @@ namespace Sic.Core
 			}
 		}
 
-		public async IAsyncEnumerable<IFileImageDetails> GetDuplicates(double similarity = 1)
+		public IAsyncEnumerable<IFileImageDetails> GetDuplicates(double similarity = 1)
+			=> GetDuplicates(similarity, null);
+
+		public async IAsyncEnumerable<IFileImageDetails> GetDuplicates(
+			double similarity = 1,
+			IProgress<IFileImageDetails>? progress = null)
 		{
 			var details = _ImageDetails.Values.ToList();
 			var count = details.Count;
-			for (var i = count - 1; i > 0; --i)
+			for (int i = count - 1, c = 1; i > 0; --i, ++c)
 			{
 				var later = details[i];
 				for (var j = i - 1; j >= 0; --j)
@@ -90,6 +95,7 @@ namespace Sic.Core
 
 					yield return removeInfo.Item;
 				}
+				progress?.Report(later);
 			}
 		}
 

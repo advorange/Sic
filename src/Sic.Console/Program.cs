@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 
 using AdvorangesSettingParser.Implementation;
@@ -6,6 +7,7 @@ using AdvorangesSettingParser.Implementation;
 using AdvorangesUtils;
 
 using Sic.Core;
+using Sic.Core.Abstractions;
 
 namespace Sic.Console
 {
@@ -18,11 +20,11 @@ namespace Sic.Console
 			var fileHandler = new FileHandler();
 			var imageComparer = new ImageComparer();
 
-#if TRUE
+#if DEBUG && TRUE
 			args = new[]
 			{
 				"-s",
-				@"D:\Test",
+				@"D:\Test - Copy",
 			};
 #endif
 
@@ -33,19 +35,29 @@ namespace Sic.Console
 			var i = 0;
 			await foreach (var file in imageComparer.CacheFiles(files))
 			{
-				ConsoleUtils.WriteLine($"[{++i}] Successfully processed {file.Source}.");
-				ConsoleUtils.DebugWrite($"[{i}] Hash length: {file.Original.Hash.Length}");
+				ConsoleUtils.WriteLine($"[#{++i}] Processed {file.Source}.");
 			}
+			System.Console.WriteLine();
+
 			var duplicates = new List<string>();
 			var j = 0;
-			await foreach (var file in imageComparer.GetDuplicates())
+			await foreach (var file in imageComparer.GetDuplicates(progress: new DuplicateProgress()))
 			{
-				ConsoleUtils.WriteLine($"[{++j}] Successfully found a duplicate: {file.Source}.");
+				ConsoleUtils.WriteLine($"[#{++j}] Found a duplicate: {file.Source}.", ConsoleColor.DarkYellow);
 				duplicates.Add(file.Source);
 			}
+			System.Console.WriteLine();
 
 			fileHandler.MoveFiles(duplicates);
-			ConsoleUtils.WriteLine($"Successfully moved {duplicates.Count} duplicate files to {fileHandler.Destination}.");
+			ConsoleUtils.WriteLine($"Moved {duplicates.Count} duplicates to {fileHandler.Destination}.");
+		}
+
+		private sealed class DuplicateProgress : IProgress<IFileImageDetails>
+		{
+			private int _Count;
+
+			public void Report(IFileImageDetails value)
+				=> ConsoleUtils.WriteLine($"[#{++_Count}] Found no duplicates for: {value.Source}.");
 		}
 	}
 }
