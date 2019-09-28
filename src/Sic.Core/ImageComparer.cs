@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.ExceptionServices;
@@ -47,13 +46,12 @@ namespace Sic.Core
 			var count = details.Count;
 			for (int i = count - 1, c = 1; i > 0; --i, ++c)
 			{
-				var later = details[i];
+				var late = details[i];
 				for (var j = i - 1; j >= 0; --j)
 				{
 					//If not even close to similar then don't test more
-					var earlier = details[j];
-					if (!AreSameData(earlier, later)
-						&& !await AreSimilarAsync(earlier, later, similarity).CAF())
+					var early = details[j];
+					if (!early.IsSameData(late) && !await early.IsSimilarAsync(late, similarity).CAF())
 					{
 						continue;
 					}
@@ -63,10 +61,10 @@ namespace Sic.Core
 					//the index to remove at is 'j' (earlier's index)
 					//the amount to decrease the indexer by is '2'
 					//It's 2 because we need to account for an early index being removed
-					var laterNewer = later.CreatedAt > earlier.CreatedAt;
+					var laterNewer = late.CreatedAt > early.CreatedAt;
 					var removeInfo = new
 					{
-						Item = laterNewer ? later : earlier,
+						Item = laterNewer ? late : early,
 						Index = laterNewer ? i : j,
 						Delta = laterNewer ? 2 : 1,
 					};
@@ -78,37 +76,15 @@ namespace Sic.Core
 
 					yield return removeInfo.Item;
 				}
-				progress?.Report(later);
+				progress?.Report(late);
 			}
 		}
 
 		public IAsyncEnumerable<IFileImageDetails> GetDuplicatesAsync(double similarity = 1)
 			=> GetDuplicatesAsync(similarity, null);
 
-		protected virtual bool AreSameData(IImageDetails x, IImageDetails y)
-			=> x.Original.Hash == y.Original.Hash;
-
-		protected virtual async Task<bool> AreSimilarAsync(
-			IFileImageDetails x,
-			IFileImageDetails y,
-			double similarity)
-		{
-			if (!x.Thumbnail.IsSimilar(y.Thumbnail, similarity))
-			{
-				return false;
-			}
-
-			//Check once again but with a higher resolution
-			var size = 512;
-			size = Math.Min(size, x.Original.Width);
-			size = Math.Min(size, x.Original.Height);
-			size = Math.Min(size, y.Original.Width);
-			size = Math.Min(size, y.Original.Height);
-
-			var x2 = await FileImageDetails.CreateAsync(x.Source, size).CAF();
-			var y2 = await FileImageDetails.CreateAsync(y.Source, size).CAF();
-			return x2.Thumbnail.IsSimilar(y2.Thumbnail, similarity);
-		}
+		protected virtual Task<IFileImageDetails> CreateAsync(string path, int size)
+							=> FileImageDetails.CreateAsync(path, size);
 
 		private sealed class BackgroundCachingAsyncEnumerable : IAsyncEnumerable<IFileImageDetails>
 		{
@@ -199,7 +175,7 @@ namespace Sic.Core
 							}
 
 							var size = _Comparer._Args.ThumbnailSize;
-							var details = await FileImageDetails.CreateAsync(path, size).CAF();
+							var details = await _Comparer.CreateAsync(path, size).CAF();
 							_Queue.Enqueue(details);
 						}
 					}, _CancellationToken));

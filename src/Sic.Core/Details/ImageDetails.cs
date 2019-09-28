@@ -2,7 +2,9 @@
 using System.Diagnostics;
 using System.IO;
 using System.Threading.Tasks;
+
 using AdvorangesUtils;
+
 using Sic.Core.Abstractions;
 using Sic.Core.Hashes;
 using Sic.Core.Utils;
@@ -74,5 +76,11 @@ namespace Sic.Core.Details
 				return hash;
 			}
 		}
+
+		public bool IsSameData(IImageDetails other)
+			=> Original.Hash == other.Original.Hash;
+
+		public Task<bool> IsSimilarAsync(IImageDetails other, double similarity = 1)
+			=> Task.FromResult(false);
 	}
 }

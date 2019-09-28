@@ -1,5 +1,5 @@
 ﻿using System;
-
+using System.Runtime.CompilerServices;
 using AdvorangesUtils;
 
 using Sic.Core.Abstractions;
@@ -8,9 +8,14 @@ namespace Sic.Console
 {
 	internal sealed class DuplicateProgress : IProgress<IFileImageDetails>
 	{
-		private int _Count;
+		private readonly StrongBox<int> _Sb;
+
+		public DuplicateProgress(StrongBox<int> sb)
+		{
+			_Sb = sb;
+		}
 
 		public void Report(IFileImageDetails value)
-			=> ConsoleUtils.WriteLine($"[#{++_Count}] Found no duplicates for: {value.Source}.");
+			=> ConsoleUtils.WriteLine($"[#{++_Sb.Value}] Found no duplicates: {value.Source}.");
 	}
 }

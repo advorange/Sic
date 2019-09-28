@@ -80,5 +80,22 @@ namespace Sic.Core.Details
 				return hash;
 			}
 		}
+
+		public bool IsSameData(IImageDetails other)
+			=> Original.Hash == other.Original.Hash;
+
+		public async Task<bool> IsSimilarAsync(IImageDetails other, double similarity = 1)
+		{
+			if (!Thumbnail.IsSimilar(other.Thumbnail, similarity) || !(other is IFileImageDetails fileOther))
+			{
+				return false;
+			}
+
+			//Check once again but with a higher resolution
+			var size = this.GetSmallestSize(fileOther);
+			var x = await CreateAsync(Source, size).CAF();
+			var y = await CreateAsync(fileOther.Source, size).CAF();
+			return x.Thumbnail.IsSimilar(y.Thumbnail, similarity);
+		}
 	}
 }

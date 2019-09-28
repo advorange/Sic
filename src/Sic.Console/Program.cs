@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -26,7 +27,7 @@ namespace Sic.Console
 			args = new[]
 			{
 				"-s",
-				@"D:\Test",
+				@"D:\Test - Copy",
 			};
 #endif
 			_Args = Args.Parse(args);
@@ -54,16 +55,19 @@ namespace Sic.Console
 		private async Task ProcessDuplicatesAsync()
 		{
 			var duplicates = new List<string>();
-			var j = 0;
-			await foreach (var file in _ImageComparer.GetDuplicatesAsync(progress: new DuplicateProgress()))
+			var sb = new StrongBox<int>();
+			await foreach (var file in _ImageComparer.GetDuplicatesAsync(progress: new DuplicateProgress(sb)))
 			{
-				ConsoleUtils.WriteLine($"[#{++j}] Found a duplicate: {file.Source}.", ConsoleColor.DarkYellow);
+				const ConsoleColor DUPLICATE_FOUND = ConsoleColor.DarkYellow;
+				const string REPORT = nameof(IProgress<int>.Report);
+
+				ConsoleUtils.WriteLine($"[#{++sb.Value}] Found a duplicate: {file.Source}.", DUPLICATE_FOUND, REPORT);
 				duplicates.Add(file.Source);
 			}
 			System.Console.WriteLine();
 
 			_FileHandler.MoveFiles(duplicates);
-			ConsoleUtils.WriteLine($"Moved {duplicates.Count} duplicates to {_Args.Destination}.");
+			ConsoleUtils.WriteLine($"Moved {duplicates.Count} duplicate(s) to {_Args.Destination}.");
 		}
 
 		private static Task Main(string[] args)
