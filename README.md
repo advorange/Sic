@@ -1,0 +1,2 @@
+# Sic
+Simple Image Comparer
