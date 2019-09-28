@@ -17,7 +17,7 @@ namespace Sic.Console
 		}
 
 		private readonly Args _Args;
-		private readonly FileHandler _FileHandler;
+		private readonly SystemFileHandler _FileHandler;
 		private readonly ImageComparer _ImageComparer;
 
 		public Program(string[] args)
@@ -30,7 +30,7 @@ namespace Sic.Console
 			};
 #endif
 			_Args = Args.Parse(args);
-			_FileHandler = new FileHandler(_Args);
+			_FileHandler = new SystemFileHandler(_Args);
 			_ImageComparer = new ImageComparer(_Args);
 		}
 

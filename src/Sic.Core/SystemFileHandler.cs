@@ -7,11 +7,11 @@ using Sic.Core.Abstractions;
 
 namespace Sic.Core
 {
-	public sealed class FileHandler : IFileHandler
+	public sealed class SystemFileHandler : IFileHandler
 	{
 		private readonly IFileHandlerArgs _Args;
 
-		public FileHandler(IFileHandlerArgs args)
+		public SystemFileHandler(IFileHandlerArgs args)
 		{
 			_Args = args;
 		}
