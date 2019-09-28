@@ -3,11 +3,16 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 16
 VisualStudioVersion = 16.0.29318.209
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Sic.Core", "src\Sic.Core\Sic.Core.csproj", "{92B97A34-664D-4F04-B79A-12DD3ACA8C12}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Sic.Core", "src\Sic.Core\Sic.Core.csproj", "{92B97A34-664D-4F04-B79A-12DD3ACA8C12}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Sic.Tests", "tests\Sic.Tests\Sic.Tests.csproj", "{9049AC33-00D1-4099-BC01-A7C0632C65AB}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Sic.Tests", "tests\Sic.Tests\Sic.Tests.csproj", "{9049AC33-00D1-4099-BC01-A7C0632C65AB}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Sic.Console", "src\Sic.Console\Sic.Console.csproj", "{1C3EEAB7-AD03-4830-9CEA-52B605B11B78}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Sic.Console", "src\Sic.Console\Sic.Console.csproj", "{1C3EEAB7-AD03-4830-9CEA-52B605B11B78}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{B29527B6-9C11-4A14-ADC7-C28B2D475783}"
+	ProjectSection(SolutionItems) = preProject
+		README.md = README.md
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
