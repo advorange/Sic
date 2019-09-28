@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Runtime.ExceptionServices;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -131,6 +133,7 @@ namespace Sic.Core
 			private readonly ImageComparer _Comparer;
 			private readonly IEnumerable<string> _Paths;
 			private readonly ConcurrentQueue<IFileImageDetails> _Queue = new ConcurrentQueue<IFileImageDetails>();
+			private Exception? _ExceptionWhileProcessing;
 			private int _FinishedProcessing;
 			private int _IsStarted;
 			public IFileImageDetails Current { get; private set; } = null!;
@@ -150,7 +153,8 @@ namespace Sic.Core
 
 			public async ValueTask<bool> MoveNextAsync()
 			{
-				if (_FinishedProcessing == 1 && _Queue.IsEmpty)
+				if ((_FinishedProcessing == 1 && _Queue.IsEmpty)
+					|| _CancellationToken.IsCancellationRequested)
 				{
 					return false;
 				}
@@ -164,6 +168,10 @@ namespace Sic.Core
 				//Wait until something is in the cache
 				while (_Queue.IsEmpty)
 				{
+					if (_ExceptionWhileProcessing != null)
+					{
+						ExceptionDispatchInfo.Capture(_ExceptionWhileProcessing).Throw();
+					}
 					await Task.Delay(10, _CancellationToken).CAF();
 				}
 
@@ -179,31 +187,39 @@ namespace Sic.Core
 
 			private async Task StartProcessingAsync()
 			{
-				var groups = _Paths.GroupInto(_Comparer._Args.ImagesPerTask);
-				var tasks = groups.Select(x => Task.Run(async () =>
-				{
-					foreach (var path in x)
-					{
-						_CancellationToken.ThrowIfCancellationRequested();
-						if (!File.Exists(path))
-						{
-							continue;
-						}
-
-						var size = _Comparer._Args.ThumbnailSize;
-						var details = await FileImageDetails.CreateAsync(path, size).CAF();
-						_Queue.Enqueue(details);
-					}
-				}, _CancellationToken));
 				try
 				{
-					await Task.WhenAll(tasks).CAF();
+					var groups = _Paths.GroupInto(_Comparer._Args.ImagesPerTask);
+					var tasks = groups.Select(x => Task.Run(async () =>
+					{
+						foreach (var path in x)
+						{
+							_CancellationToken.ThrowIfCancellationRequested();
+							if (!File.Exists(path))
+							{
+								continue;
+							}
+
+							var size = _Comparer._Args.ThumbnailSize;
+							var details = await FileImageDetails.CreateAsync(path, size).CAF();
+							_Queue.Enqueue(details);
+						}
+					}, _CancellationToken));
+
+					try
+					{
+						await Task.WhenAll(tasks).CAF();
+					}
+					catch (TaskCanceledException)
+					{
+						//Just treat TaskCanceledException as an early end of processing
+					}
+					Interlocked.Exchange(ref _FinishedProcessing, 1);
 				}
-				catch (TaskCanceledException)
+				catch (Exception e)
 				{
-					//Just treat TaskCanceledException as an early end of processing
+					_ExceptionWhileProcessing = e;
 				}
-				Interlocked.Exchange(ref _FinishedProcessing, 1);
 			}
 		}
 	}

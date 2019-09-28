@@ -46,8 +46,7 @@ namespace Sic.Console
 			var i = 0;
 			await foreach (var details in _ImageComparer.CacheFilesAsync(files))
 			{
-				var count = Interlocked.Increment(ref i);
-				ConsoleUtils.WriteLine($"[#{i}] Processed {details.Source}.");
+				ConsoleUtils.WriteLine($"[#{++i}] Processed {details.Source}.");
 			}
 			System.Console.WriteLine();
 		}
