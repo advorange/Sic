@@ -153,6 +153,7 @@ namespace Sic.Core
 
 			public async ValueTask<bool> MoveNextAsync()
 			{
+				ThrowIfException();
 				if ((_FinishedProcessing == 1 && _Queue.IsEmpty)
 					|| _CancellationToken.IsCancellationRequested)
 				{
@@ -168,10 +169,7 @@ namespace Sic.Core
 				//Wait until something is in the cache
 				while (_Queue.IsEmpty)
 				{
-					if (_ExceptionWhileProcessing != null)
-					{
-						ExceptionDispatchInfo.Capture(_ExceptionWhileProcessing).Throw();
-					}
+					ThrowIfException();
 					await Task.Delay(10, _CancellationToken).CAF();
 				}
 
@@ -219,6 +217,14 @@ namespace Sic.Core
 				catch (Exception e)
 				{
 					_ExceptionWhileProcessing = e;
+				}
+			}
+
+			private void ThrowIfException()
+			{
+				if (_ExceptionWhileProcessing != null)
+				{
+					ExceptionDispatchInfo.Capture(_ExceptionWhileProcessing).Throw();
 				}
 			}
 		}
