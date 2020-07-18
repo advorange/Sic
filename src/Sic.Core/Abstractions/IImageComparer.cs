@@ -4,12 +4,10 @@ namespace Sic.Core.Abstractions
 {
 	public interface IImageComparer
 	{
-		IReadOnlyCollection<IFileImageDetails> ImageDetails { get; }
+		IAsyncEnumerable<IFileImageDetails> GetDuplicatesAsync(
+			IEnumerable<IFileImageDetails> details,
+			double similarity = 1);
 
-		void Cache(IFileImageDetails details);
-
-		IAsyncEnumerable<IFileImageDetails> CacheFilesAsync(IEnumerable<string> paths);
-
-		IAsyncEnumerable<IFileImageDetails> GetDuplicatesAsync(double similarity = 1);
+		IAsyncEnumerable<IFileImageDetails> GetFilesAsync(IEnumerable<string> paths);
 	}
 }

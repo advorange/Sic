@@ -1,12 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
-using System.Threading;
 using System.Threading.Tasks;
 
 using AdvorangesUtils;
 
 using Sic.Core;
+using Sic.Core.Abstractions;
 
 namespace Sic.Console
 {
@@ -37,26 +37,29 @@ namespace Sic.Console
 
 		public async Task RunAsync()
 		{
-			await ProcessFilesAsync().CAF();
-			await ProcessDuplicatesAsync().CAF();
+			var files = await ProcessFilesAsync().CAF();
+			await ProcessDuplicatesAsync(files).CAF();
 		}
 
-		private async Task ProcessFilesAsync()
+		private async Task<IEnumerable<IFileImageDetails>> ProcessFilesAsync()
 		{
 			var files = _FileHandler.GetImageFiles();
+			var details = new List<IFileImageDetails>();
 			var i = 0;
-			await foreach (var details in _ImageComparer.CacheFilesAsync(files))
+			await foreach (var file in _ImageComparer.GetFilesAsync(files))
 			{
-				ConsoleUtils.WriteLine($"[#{++i}] Processed {details.Source}.");
+				ConsoleUtils.WriteLine($"[#{++i}] Processed {file.Source}.");
+				details.Add(file);
 			}
 			System.Console.WriteLine();
+			return details;
 		}
 
-		private async Task ProcessDuplicatesAsync()
+		private async Task ProcessDuplicatesAsync(IEnumerable<IFileImageDetails> files)
 		{
 			var duplicates = new List<string>();
 			var sb = new StrongBox<int>();
-			await foreach (var file in _ImageComparer.GetDuplicatesAsync(progress: new DuplicateProgress(sb)))
+			await foreach (var file in _ImageComparer.GetDuplicatesAsync(files, progress: new DuplicateProgress(sb)))
 			{
 				const ConsoleColor DUPLICATE_FOUND = ConsoleColor.DarkYellow;
 				const string REPORT = nameof(IProgress<int>.Report);

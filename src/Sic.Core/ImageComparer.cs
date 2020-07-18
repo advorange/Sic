@@ -18,11 +18,6 @@ namespace Sic.Core
 	{
 		private readonly IImageComparerArgs _Args;
 
-		private readonly ConcurrentDictionary<string, IFileImageDetails> _ImageDetails
-			= new ConcurrentDictionary<string, IFileImageDetails>();
-
-		public IReadOnlyCollection<IFileImageDetails> ImageDetails => _ImageDetails.Values.ToArray();
-
 		public ImageComparer() : this(ImageComparerArgs.Default)
 		{
 		}
@@ -32,25 +27,20 @@ namespace Sic.Core
 			_Args = args;
 		}
 
-		public void Cache(IFileImageDetails details)
-			=> _ImageDetails.AddOrUpdate(details.Source, _ => details, (_, __) => details);
-
-		public IAsyncEnumerable<IFileImageDetails> CacheFilesAsync(IEnumerable<string> paths)
-			=> new BackgroundCachingAsyncEnumerable(paths, this);
-
 		public async IAsyncEnumerable<IFileImageDetails> GetDuplicatesAsync(
+			IEnumerable<IFileImageDetails> details,
 			double similarity = 1,
 			IProgress<IFileImageDetails>? progress = null)
 		{
-			var details = _ImageDetails.Values.ToList();
-			var count = details.Count;
+			var list = details.ToList();
+			var count = list.Count;
 			for (int i = count - 1, c = 1; i > 0; --i, ++c)
 			{
-				var late = details[i];
+				var late = list[i];
 				for (var j = i - 1; j >= 0; --j)
 				{
 					//If not even close to similar then don't test more
-					var early = details[j];
+					var early = list[j];
 					if (!early.IsSameData(late) && !await early.IsSimilarAsync(late, similarity).CAF())
 					{
 						continue;
@@ -70,8 +60,7 @@ namespace Sic.Core
 					};
 
 					//Remove stuff from the cache and the iterating list
-					_ImageDetails.TryRemove(removeInfo.Item.Source, out _);
-					details.RemoveAt(removeInfo.Index);
+					list.RemoveAt(removeInfo.Index);
 					i -= removeInfo.Delta;
 
 					yield return removeInfo.Item;
@@ -80,11 +69,16 @@ namespace Sic.Core
 			}
 		}
 
-		public IAsyncEnumerable<IFileImageDetails> GetDuplicatesAsync(double similarity = 1)
-			=> GetDuplicatesAsync(similarity, null);
+		public IAsyncEnumerable<IFileImageDetails> GetDuplicatesAsync(
+			IEnumerable<IFileImageDetails> details,
+			double similarity = 1)
+			=> GetDuplicatesAsync(details, similarity, null);
+
+		public IAsyncEnumerable<IFileImageDetails> GetFilesAsync(IEnumerable<string> paths)
+			=> new BackgroundCachingAsyncEnumerable(paths, this);
 
 		protected virtual Task<IFileImageDetails> CreateAsync(string path, int size)
-							=> FileImageDetails.CreateAsync(path, size);
+			=> FileImageDetails.CreateAsync(path, size);
 
 		private sealed class BackgroundCachingAsyncEnumerable : IAsyncEnumerable<IFileImageDetails>
 		{
@@ -155,7 +149,6 @@ namespace Sic.Core
 				}
 
 				Current = details;
-				_Comparer.Cache(Current);
 				return true;
 			}
 
